@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>年収の壁シミュレーター（完全版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 20px;
+      background: #f4f6f8;
+    }
+    h2, h3 { text-align: center; }
+    label { font-weight: bold; }
+    input, select, button {
+      width: 100%;
+      font-size: 16px;
+      padding: 8px;
+      margin: 6px 0 12px;
+    }
+    button {
+      background: #1976d2;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    .sub { background: #555; }
+    .box {
+      background: #fff;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    /* 対象／対象外サマリー */
+    .summary-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .summary {
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .hit { background: #e3f2fd; }
+    .out { background: #fbe9e7; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 8px;
+      vertical-align: top;
+      text-align: center;
+    }
+    th { background: #f0f0f0; }
+
+    details summary {
+      cursor: pointer;
+      font-size: 13px;
+      color: #1976d2;
+      margin-top: 4px;
+    }
+    details ul {
+      margin: 6px 0 0 18px;
+      padding: 0;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .note { font-size: 13px; color: #555; }
+    .good { color: #388e3c; font-weight: bold; }
+    .bad { color: #d32f2f; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h2>年収の壁シミュレーター</h2>
+
+<label>保存名（例：今の条件／時給アップ後）</label>
+<input type="text" id="saveName">
+
+<label>時給（円）</label>
+<input type="number" id="hourlyWage" placeholder="例：1000">
+
+<label>週の労働時間（時間）</label>
+<input type="number" id="weeklyHours" placeholder="例：20">
+
+<label>勤務先の従業員数</label>
+<input type="number" id="employees" placeholder="例：60">
+
+<label>雇用見込み</label>
+<select id="employmentPeriod">
+  <option value="long">2か月以上</option>
+  <option value="short">2か月未満</option>
+</select>
+
+<label>扶養タイプ</label>
+<select id="supportType">
+  <option value="spouse">配偶者（扶養あり）</option>
+  <option value="student">学生</option>
+  <option value="single">単身（扶養なし）</option>
+</select>
+
+<label>月別ボーナス（円・不定期OK）</label>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+  <input type="number" class="bonus" placeholder="1月">
+  <input type="number" class="bonus" placeholder="2月">
+  <input type="number" class="bonus" placeholder="3月">
+  <input type="number" class="bonus" placeholder="4月">
+  <input type="number" class="bonus" placeholder="5月">
+  <input type="number" class="bonus" placeholder="6月">
+  <input type="number" class="bonus" placeholder="7月">
+  <input type="number" class="bonus" placeholder="8月">
+  <input type="number" class="bonus" placeholder="9月">
+  <input type="number" class="bonus" placeholder="10月">
+  <input type="number" class="bonus" placeholder="11月">
+  <input type="number" class="bonus" placeholder="12月">
+</div>
+
+<button onclick="calculate()">計算する</button>
+<button class="sub" onclick="saveData()">この条件を保存</button>
+
+<div id="result" class="box"></div>
+
+<h3>保存した条件の比較</h3>
+<div id="compare" class="box"></div>
+
+<script>
+/* ===== ボーナス合計 ===== */
+function getBonusTotal() {
+  let total = 0;
+  document.querySelectorAll(".bonus").forEach(b => {
+    total += Number(b.value || 0);
+  });
+  return total;
+}
+
+/* ===== 中核計算 ===== */
+function calculateCore() {
+  const hourly = Number(hourlyWage.value || 0);
+  const weekly = Number(weeklyHours.value || 0);
+  const employeesNum = Number(employees.value || 0);
+  const employment = employmentPeriod.value;
+  const support = supportType.value;
+  const bonus = getBonusTotal();
+
+  const baseAnnual = hourly * weekly * 4.33 * 12;
+  const annual = baseAnnual + bonus;
+
+  const is106 =
+    annual >= 1060000 &&
+    weekly >= 20 &&
+    employeesNum >= 51 &&
+    employment === "long" &&
+    support !== "student";
+
+  // 簡易手取り（目安）
+  const incomeTax = annual > 1600000 ? annual * 0.05 : 0;
+  const social = is106 ? annual * 0.15 : 0;
+  const takeHome = annual - incomeTax - social;
+
+  return { hourly, weekly, annual, bonus, is106, takeHome };
+}
+
+/* ===== 画面表示 ===== */
+function calculate() {
+  const d = calculateCore();
+
+  const wallsJudge = [
+    { name: "160万円", hit: d.annual >= 1600000 },
+    { name: "106万円", hit: d.is106 },
+    { name: "130万円", hit: d.annual >= 1300000 },
+    { name: "150万円", hit: d.annual >= 1500000 },
+    { name: "201万円", hit: d.annual >= 2010000 }
+  ];
+
+  const hitWalls = wallsJudge.filter(w => w.hit).map(w => w.name);
+  const outWalls = wallsJudge.filter(w => !w.hit).map(w => w.name);
+
+  let html = `
+    <p><strong>年収：</strong>${Math.floor(d.annual).toLocaleString()} 円</p>
+<p><strong>手取り（目安）：</strong>${Math.floor(d.takeHome).toLocaleString()} 円</p>
+<p><strong>手取り（月収・目安）：</strong>${Math.floor(d.takeHome / 12).toLocaleString()} 円</p>
+
+    <div class="summary-box">
+      <div class="summary hit">
+        <strong>あなたが対象となる壁</strong><br>
+        ${hitWalls.length ? hitWalls.join(" ／ ") : "なし"}
+      </div>
+      <div class="summary out">
+        <strong>対象外の壁</strong><br>
+        ${outWalls.join(" ／ ")}
+      </div>
+    </div>
+
+    <h3>各壁を超えない最大時給</h3>
+    <table>
+      <tr>
+        <th>壁</th>
+        <th>内容</th>
+        <th>最大時給</th>
+      </tr>
+  `;
+
+  const wallDetails = [
+    { name: "160万円", limit: 1600000, desc: "所得税がかかり始める" },
+    {
+      name: "106万円",
+      limit: 1060000,
+      conditional: true,
+      desc: `
+        社会保険加入の可能性（条件あり）1つでも該当しなければ対象外
+        <details>
+          <summary>条件を見る</summary>
+          <ul>
+            <li>年収106万円以上</li>
+            <li>週20時間以上勤務</li>
+            <li>従業員51人以上の事業所</li>
+            <li>2か月超の雇用見込み</li>
+            <li>学生ではない</li>
+          </ul>
+        </details>
+      `
+    },
+    { name: "130万円", limit: 1300000, desc: "扶養から外れる" },
+    { name: "150万円", limit: 1500000, desc: "配偶者特別控除が減少" },
+    { name: "201万円", limit: 2010000, desc: "配偶者特別控除が終了" }
+  ];
+
+  wallDetails.forEach(w => {
+    if (w.conditional && !d.is106) {
+      html += `
+        <tr>
+          <td>${w.name}</td>
+          <td>${w.desc}</td>
+          <td>対象外</td>
+        </tr>
+      `;
+      return;
+    }
+
+    const maxAnnual = w.limit - d.bonus;
+    const maxHourly = Math.floor(maxAnnual / (d.weekly * 4.33 * 12));
+
+    html += `
+      <tr>
+        <td>${w.name}</td>
+        <td>${w.desc}</td>
+        <td>${maxHourly.toLocaleString()} 円</td>
+      </tr>
+    `;
+  });
+
+  html += "</table>";
+  result.innerHTML = html;
+}
+
+/* ===== 保存 ===== */
+function saveData() {
+  if (!saveName.value) {
+    alert("保存名を入力してください");
+    return;
+  }
+
+  const d = calculateCore();
+  const list = JSON.parse(localStorage.getItem("wallSimData") || "[]");
+
+  list.push({
+    name: saveName.value,
+    hourly: d.hourly,
+    weekly: d.weekly,
+    annual: Math.floor(d.annual),
+    takeHome: Math.floor(d.takeHome),
+    insurance: d.is106 ? "あり" : "なし"
+  });
+
+  localStorage.setItem("wallSimData", JSON.stringify(list));
+  renderCompare();
+}
+
+/* ===== 比較表示 ===== */
+function renderCompare() {
+  const list = JSON.parse(localStorage.getItem("wallSimData") || "[]");
+  if (list.length === 0) {
+    compare.innerHTML = "<p class='note'>保存データはありません</p>";
+    return;
+  }
+
+  let html = `
+    <table>
+      <tr>
+        <th>名前</th>
+        <th>時給</th>
+        <th>週時間</th>
+        <th>年収</th>
+        <th>手取り</th>
+        <th>社会保険</th>
+      </tr>
+  `;
+
+  list.forEach(d => {
+    html += `
+      <tr>
+        <td>${d.name}</td>
+        <td>${d.hourly}</td>
+        <td>${d.weekly}</td>
+        <td>${d.annual.toLocaleString()} 円</td>
+        <td>${d.takeHome.toLocaleString()} 円</td>
+        <td class="${d.insurance === 'あり' ? 'bad':'good'}">${d.insurance}</td>
+      </tr>
+    `;
+  });
+
+  html += "</table>";
+  compare.innerHTML = html;
+}
+
+renderCompare();
+</script>
+
+</body>
+</html>
