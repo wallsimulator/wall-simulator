@@ -82,7 +82,7 @@
 
 <h2>年収の壁シミュレーター</h2>
 
-<label>保存名（例：今の条件／時給アップ後）</label>
+<label>保存名（例：今の条件／時給アップ後）未記入OK！</label>
 <input type="text" id="saveName">
 
 <label>時給（円）</label>
@@ -173,7 +173,7 @@ function calculate() {
   const d = calculateCore();
 
   const wallsJudge = [
-    { name: "160万円", hit: d.annual >= 1600000 },
+    { name: "178万円", hit: d.annual >= 1780000 },
     { name: "106万円", hit: d.is106 },
     { name: "130万円", hit: d.annual >= 1300000 },
     { name: "150万円", hit: d.annual >= 1500000 },
@@ -209,13 +209,13 @@ function calculate() {
   `;
 
   const wallDetails = [
-    { name: "160万円", limit: 1600000, desc: "所得税がかかり始める" },
+    { name: "178万円", limit: 1780000, desc: "所得税がかかり始める(2026.1～適用)" },
     {
       name: "106万円",
       limit: 1060000,
       conditional: true,
       desc: `
-        社会保険加入の可能性（条件あり）1つでも該当しなければ対象外
+        社会保険加入の可能性【2026.10に撤廃予定】（条件あり）1つでも該当しなければ対象外
         <details>
           <summary>条件を見る</summary>
           <ul>
@@ -228,7 +228,7 @@ function calculate() {
         </details>
       `
     },
-    { name: "130万円", limit: 1300000, desc: "扶養から外れる" },
+    { name: "130万円", limit: 1300000, desc: "扶養から外れる(2026.4～労働契約の収入見込みで判断に変更)" },
     { name: "150万円", limit: 1500000, desc: "配偶者特別控除が減少" },
     { name: "201万円", limit: 2010000, desc: "配偶者特別控除が終了" }
   ];
@@ -326,4 +326,3 @@ renderCompare();
 
 </body>
 </html>
-
